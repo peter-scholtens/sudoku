@@ -260,15 +260,24 @@ impl SudokuSolution {
 		true
 	}
 
-	pub fn undecided_cells(&self)-> Vec<(usize,usize)> {
+	pub fn undecided_cells(&self)-> Vec<(usize,usize,usize)> {
 		let mut undec_cells = Vec::new();
 		for (ri,rv) in self.row.iter().enumerate() {
 			for (ci,_) in rv.column.iter().enumerate() {
-				if self.unique_option(ri,ci).is_none() {
-					undec_cells.push((ri,ci));
+				let mut count = 0;
+				for i in 0..DIMENSIONPWR2 {
+					if self.row[ri].column[ci].options[i] == true {
+						count = count + 1;
+					}
+				}
+				if count > 1 {
+					undec_cells.push((ri,ci,count));
 				}
 			}
 		}
+		undec_cells.sort_by_key(|tuple| DIMENSIONPWR2-tuple.2);
+		//println!("{:?}",undec_cells);
+		//println!("");
 		undec_cells
 	}
 
@@ -466,8 +475,9 @@ pub fn create_puzzle(field: &SudokuField) -> SudokuProblem {
 	// As long as the solution space is not unique, reveal another cell of the problem matrix.
 	while !space.unique_sudoku() {
 		let undec_cells = space.undecided_cells();
-		let i = rand::thread_rng().gen_range(0, undec_cells.len());
-		let (ri,ci) = undec_cells[i];
+		// Choose one of the first quarter of sorted cells (the ones with the most options).
+		let i = rand::thread_rng().gen_range(0, 1+undec_cells.len().div(4));
+		let (ri,ci,_) = undec_cells[i];
 		let value = field.data[ri][ci];
 		problem.set(ri,ci,value);
 		space.set(ri,ci,value);

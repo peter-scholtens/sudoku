@@ -72,6 +72,17 @@ impl SudokuField {
 		SudokuField{ data: vec![vec![0;DIMENSIONPWR2];DIMENSIONPWR2]}
 	}
 
+	pub fn new_with_data(input: Vec<Vec<usize>>) -> SudokuField {
+		let mut retval = SudokuField{data: input};
+		// Caution, all data was numbers 1..9 but should be changed to index 0..8
+		for row in retval.data.iter_mut() {
+			for column in row.iter_mut() {
+				*column = *column-1;
+			}
+		}
+		retval
+	}
+
 	pub fn set(&mut self, r:usize, c:usize, v:usize) {
 		self.data[r][c]=v;
 	}
@@ -86,7 +97,7 @@ impl SudokuField {
 	}
 
 	pub fn swap_row(&mut self, r_index: usize, shift: usize) {
-		// shift i 0,1 or 2 in case of 3x3 matrix. Will fail if not unique!
+		// shift i 0,1 or 2 in case of 3x3 group. Will fail if not unique!
 		for c_index in 0..DIMENSIONPWR2 {
 			let rb_index =  DIMENSION*r_index.div(DIMENSION)+(r_index+shift).rem(DIMENSION);
 			let value_a = self.data[r_index ][c_index];
@@ -97,7 +108,7 @@ impl SudokuField {
 	}
 
 	pub fn swap_column(&mut self, c_index: usize, shift: usize) {
-		// shift i 0,1 or 2 in case of 3x3 matrix. Will fail if not unique!
+		// shift i 0,1 or 2 in case of 3x3 group. Will fail if not unique!
 		for r_index in 0..DIMENSIONPWR2 {
 			let cb_index =  DIMENSION*c_index.div(DIMENSION)+(c_index+shift).rem(DIMENSION);
 			let value_a = self.data[r_index][c_index ];
@@ -141,8 +152,9 @@ impl SudokuField {
 		}
 	}
 
+	// Verifies if every number is noly seen once in each row, column and group.
 	pub fn verify(&self) -> bool {
-		// Verify uniqueness of all rows.
+		// Verify uniqueness of in all columns.
 		for ci in 0..DIMENSIONPWR2 {
 			let mut seen = vec![false;DIMENSIONPWR2];
 			for ri in 0..DIMENSIONPWR2 {
@@ -154,7 +166,7 @@ impl SudokuField {
 				}
 			}
 		}
-		// Verify uniqueness of all column.
+		// Verify uniqueness of all rows.
 		for ri in 0..DIMENSIONPWR2 {
 			let mut seen = vec![false;DIMENSIONPWR2];
 			for ci in 0..DIMENSIONPWR2 {
@@ -166,7 +178,25 @@ impl SudokuField {
 				}
 			}
 		}
-		// TODO check 3x3 square;
+		// Verify uniquness of all groups;
+		for sr_index in 0..DIMENSION {
+			for sc_index in 0..DIMENSION {
+				let mut seen = vec![false;DIMENSIONPWR2];
+				for r_index in 0..DIMENSION {
+					for c_index in 0..DIMENSION {
+						let tr_index = DIMENSION*sr_index+r_index;
+						let tc_index = DIMENSION*sc_index+c_index;
+						let v = self.data[tr_index][tc_index];
+						if seen[v] {
+							return false;
+						} else {
+							seen[v] = true;
+						}
+					}
+				}
+			}
+		}
+		// If we arrive here, the sudoku field is correct.
 		return true
 	}
 }
@@ -231,6 +261,7 @@ impl SudokuSolution {
 		return test;
 	}
 
+	// Verifies if at position (r,c) a unque option is present.
 	// Can be faster with take_while() ??
 	pub fn unique_option(&self,r_index: usize, c_index: usize) -> Option<usize> {
 		let mut uniq = 0;
@@ -354,6 +385,7 @@ impl SudokuSolution {
 		count
 	}
 
+	// Verifies if one of the others cells in the same row, column or group has a unique option.
 	pub fn unique_others(&self,r_index: usize, c_index: usize, value: usize) -> bool {
 		let mut unique = false;
 		// First check others in row
@@ -404,9 +436,9 @@ impl SudokuSolution {
 	unique
 	}
 
-	// Function which removes all unique options in a row/column/3x3mat.
+	// Function which removes all unique options in a row/column/3x3group.
 	// If e.g. a 9 has only one possibly position in a row, set this value
-	// and remove others in column and 3x3 mat.
+	// and remove others in column and 3x3 group.
 	// Reports number of set cells. Must be called repetitvely till 0 cells
 	// are touched.
 	pub fn reduce_options(&mut self) -> usize {
@@ -440,7 +472,7 @@ impl SudokuSolution {
 					count = count + self.remove_others(r_i_last,c_index,symbol);
 				}
 			}
-			// then all 3x3 mat.
+			// then all 3x3 group.
 			for sr_index in 0..DIMENSION {
 				for sc_index in 0..DIMENSION {
 					let mut occ = 0;

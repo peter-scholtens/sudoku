@@ -327,7 +327,7 @@ impl SudokuSolution {
 
 	pub fn remove_others(&mut self,r_index: usize, c_index: usize, value: usize) -> usize {
 		let mut count = 0;
-		// First clear others in row
+		// First clear option of others in row
 		for r in 0..DIMENSIONPWR2 {
 			if r != r_index {
 				{
@@ -339,7 +339,7 @@ impl SudokuSolution {
 				}
 			}
 		}
-		// Secondly, clear others in column
+		// Secondly, clear option of others in column
 		for c in 0..DIMENSIONPWR2 {
 			if c != c_index {
 				let d = &mut self.row[r_index].column[c].options[value];
@@ -349,37 +349,16 @@ impl SudokuSolution {
 				}
 			}
 		}
-		// As third action, clear others in rectangle
-		let r1 = 3*r_index.div(3)+(r_index+1).rem(3);
-		let r2 = 3*r_index.div(3)+(r_index+2).rem(3);
-		let c1 = 3*c_index.div(3)+(c_index+1).rem(3);
-		let c2 = 3*c_index.div(3)+(c_index+2).rem(3);
-		{
-			let d = &mut self.row[r1].column[c1].options[value];
-			if *d {
-				count+=1;
-				*d = false;
-			}
-		}
-		{
-			let d = &mut self.row[r1].column[c2].options[value];
-			if *d {
-				count+=1;
-				*d = false;
-			}
-		}
-		{
-			let d = &mut self.row[r2].column[c1].options[value];
-			if *d {
-				count+=1;
-				*d = false;
-			}
-		}
-		{
-			let d = &mut self.row[r2].column[c2].options[value];
-			if *d {
-				count+=1;
-				*d = false;
+		// As third action, clear option others in group
+		for sub_r_index in 1..DIMENSION {
+			for sub_c_index in 1..DIMENSION {
+				let r = DIMENSION*r_index.div(DIMENSION)+(r_index+sub_r_index).rem(DIMENSION);
+				let c = DIMENSION*c_index.div(DIMENSION)+(c_index+sub_c_index).rem(DIMENSION);
+				let d = &mut self.row[r].column[c].options[value];
+				if *d {
+					count+=1;
+					*d = false;
+				}
 			}
 		}
 		count
@@ -408,30 +387,17 @@ impl SudokuSolution {
 				}
 			}
 		}
-		// As third action, check others in rectangle
-		let r1 = DIMENSION*r_index.div(DIMENSION)+(r_index+1).rem(DIMENSION);
-		let r2 = DIMENSION*r_index.div(DIMENSION)+(r_index+2).rem(DIMENSION);
-		let c1 = DIMENSION*c_index.div(DIMENSION)+(c_index+1).rem(DIMENSION);
-		let c2 = DIMENSION*c_index.div(DIMENSION)+(c_index+2).rem(DIMENSION);
-		let opt = self.unique_option(r1,c1);
-		match opt {
-			Some(val) => if val == value {unique = true},
-			None      => {},
-		}
-		let opt = self.unique_option(r1,c2);
-		match opt {
-			Some(val) => if val == value {unique = true},
-			None      => {},
-		}
-		let opt = self.unique_option(r2,c1);
-		match opt {
-			Some(val) => if val == value {unique = true},
-			None      => {},
-		}
-		let opt = self.unique_option(r2,c2);
-		match opt {
-			Some(val) => if val == value {unique = true},
-			None      => {},
+		// As third action, check others in group
+		for sub_r_index in 1..DIMENSION {
+			for sub_c_index in 1..DIMENSION {
+				let r = DIMENSION*r_index.div(DIMENSION)+(r_index+sub_r_index).rem(DIMENSION);
+				let c = DIMENSION*c_index.div(DIMENSION)+(c_index+sub_c_index).rem(DIMENSION);
+				let opt = self.unique_option(r,c);
+				match opt {
+					Some(val) => if val == value {unique = true},
+					None      => {},
+				}
+			}
 		}
 	unique
 	}
@@ -473,15 +439,15 @@ impl SudokuSolution {
 				}
 			}
 			// then all 3x3 group.
-			for sr_index in 0..DIMENSION {
-				for sc_index in 0..DIMENSION {
+			for super_r_index in 0..DIMENSION {
+				for super_c_index in 0..DIMENSION {
 					let mut occ = 0;
 					let mut r_i_last = 0;
 					let mut c_i_last = 0;
 					for r_index in 0..DIMENSION {
 						for c_index in 0..DIMENSION {
-							let tr_index = DIMENSION*sr_index+r_index;
-							let tc_index = DIMENSION*sc_index+c_index;
+							let tr_index = DIMENSION*super_r_index+r_index;
+							let tc_index = DIMENSION*super_c_index+c_index;
 							if self.row[tr_index].column[tc_index].options[symbol] {
 								r_i_last = tr_index;
 								c_i_last = tc_index;
@@ -494,6 +460,7 @@ impl SudokuSolution {
 					}
 				}
 			}
+			// unique in two rows and two columns of the same group? then groups has only one option left.
 		}
 		//println!("count = {:?}",count);
 		count

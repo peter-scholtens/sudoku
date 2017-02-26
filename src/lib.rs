@@ -261,7 +261,7 @@ impl SudokuSolution {
 		return test;
 	}
 
-	// Verifies if at position (r,c) a unque option is present.
+	// Verifies if at position (r,c) a unique option is present.
 	// Can be faster with take_while() ??
 	pub fn unique_option(&self,r_index: usize, c_index: usize) -> Option<usize> {
 		let mut uniq = 0;
@@ -408,7 +408,7 @@ impl SudokuSolution {
 	// Reports number of set cells. Must be called repetitvely till 0 cells
 	// are touched.
 	pub fn reduce_options(&mut self) -> usize {
-		let mut count = 0;
+		let mut count_reduc = 0;
 		for symbol in 0..DIMENSIONPWR2 {
 			// first check rows.
 			for r_index in 0..DIMENSIONPWR2 {
@@ -421,7 +421,7 @@ impl SudokuSolution {
 					}
 				}
 				if occ == 1 {
-					count = count + self.remove_others(r_index,c_i_last,symbol);
+					count_reduc = count_reduc + self.remove_others(r_index,c_i_last,symbol);
 				}
 			}
 			// then all columns.
@@ -435,7 +435,7 @@ impl SudokuSolution {
 					}
 				}
 				if occ == 1 {
-					count = count + self.remove_others(r_i_last,c_index,symbol);
+					count_reduc = count_reduc + self.remove_others(r_i_last,c_index,symbol);
 				}
 			}
 			// then all 3x3 group.
@@ -456,14 +456,89 @@ impl SudokuSolution {
 						}
 					}
 					if occ == 1 {
-						count = count + self.remove_others(r_i_last,c_i_last,symbol);
+						count_reduc = count_reduc + self.remove_others(r_i_last,c_i_last,symbol);
 					}
 				}
 			}
-			// unique in two rows and two columns of the same group? then groups has only one option left.
+			// Symbol is unique in two rows and two columns of the same group?
+			// Then groups has only one option left.
+			for super_r_index in 0..DIMENSION {
+				for super_c_index in 0..DIMENSION {
+					// Verify cells with shared column, outside group.
+					let mut unique_column = vec![false; DIMENSION];
+					for sub_c_index in 0..DIMENSION {
+						let c_index = super_c_index*DIMENSION+sub_c_index;
+						// First cells before in the group.
+						for r_index in 0..DIMENSION*super_r_index {
+							let opt = self.unique_option(r_index,c_index);
+							match opt {
+								Some(val) => if val == symbol {unique_column[sub_c_index] = true},
+								None      => {},
+							}
+						}
+						// Second cells after in the group. Same code... DRY?
+						for r_index in DIMENSION*(super_r_index+1)..DIMENSION*DIMENSION {
+							let opt = self.unique_option(r_index,c_index);
+							match opt {
+								Some(val) => if val == symbol {unique_column[sub_c_index] = true},
+								None      => {},
+							}
+						}
+					}
+					// Now same for rows...
+					let mut unique_row = vec![false; DIMENSION];
+					for sub_r_index in 0..DIMENSION {
+						let r_index = super_r_index*DIMENSION+sub_r_index;
+						// First cells before in the group.
+						for c_index in 0..DIMENSION*super_c_index {
+							let opt = self.unique_option(r_index,c_index);
+							match opt {
+								Some(val) => if val == symbol {unique_row[sub_r_index] = true},
+								None      => {},
+							}
+						}
+						// Second cells after in the group. Same code... DRY?
+						for c_index in DIMENSION*(super_c_index+1)..DIMENSION*DIMENSION {
+							let opt = self.unique_option(r_index,c_index);
+							match opt {
+								Some(val) => if val == symbol {unique_column[sub_r_index] = true},
+								None      => {},
+							}
+						}
+					}
+					// If both unique vectors have DIM-1 uniques, than we can set the remaining one.
+					let mut count_r = DIMENSION;
+					let mut last_r  = 0;
+					for r in 0..DIMENSION {
+						if unique_row[r] {
+							count_r = count_r - 1;
+						} else {
+							last_r = r; // get remaining non-unique row.
+						}
+					}
+					let mut count_c = DIMENSION;
+					let mut last_c  = 0;
+					for c in 0..DIMENSION {
+						if unique_column[c] {
+							count_c = count_c - 1;
+						} else {
+							last_c = c; // get remaining non-unique column.
+						}
+					}
+					// okay, so if only one non-unique row and one non-unique column remain,
+					// then we can set this one:
+					let r = super_r_index*DIMENSION+last_r;
+					let c = super_c_index*DIMENSION+last_c;
+					// Make sure that it not was unique already (to avoid inf. loop)
+					if count_r == 1 && count_c == 1 && self.unique_option(r,c).is_none() {
+						self.set(r,c,symbol);
+						count_reduc = count_reduc + 1;
+					}
+				}
+			}
 		}
-		//println!("count = {:?}",count);
-		count
+		//println!("count_reduc = {:?}",count_reduc);
+		count_reduc
 	}
 
 }

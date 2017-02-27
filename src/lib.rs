@@ -19,10 +19,6 @@ pub struct SudokuSolution {
 	row: Vec<SudokuRow>,
 }
 
-pub struct SudokuField {
-	data: Vec<Vec<usize>>,
-}
-
 pub struct Sudoku {
 	data: Vec<Vec<Vec<bool>>>,
 }
@@ -34,6 +30,9 @@ impl Sudoku {
 	}
 
 	pub fn set(&mut self, r:usize, c:usize, v:usize) {
+		for vi in 0..DIMENSIONPWR2 {
+			self.data[r][c][vi]=false;
+		}
 		self.data[r][c][v]=true;
 	}
 
@@ -76,57 +75,29 @@ impl Sudoku {
 		}
 		println!("Revealed {:?} cells of {:?}",count,DIMENSIONPWR2*DIMENSIONPWR2);
 	}
-}
 
-impl SudokuField {
-
-	pub fn new() -> SudokuField {
-		SudokuField{ data: vec![vec![0;DIMENSIONPWR2];DIMENSIONPWR2]}
-	}
-
-	pub fn new_with_data(input: Vec<Vec<usize>>) -> SudokuField {
-		let mut retval = SudokuField{data: input};
+	pub fn new_with_data(input: Vec<Vec<usize>>) -> Sudoku {
+		let mut retval = Sudoku::new();
 		// Caution, all data was numbers 1..9 but should be changed to index 0..8
-		for row in retval.data.iter_mut() {
-			for column in row.iter_mut() {
-				*column = *column-1;
+		for (ri,row) in retval.data.iter_mut().enumerate() {
+			for (ci,column) in row.iter_mut().enumerate() {
+				column[input[ri][ci]-1] = true;
 			}
 		}
 		retval
 	}
 
-	pub fn set(&mut self, r:usize, c:usize, v:usize) {
-		self.data[r][c]=v;
-	}
-
-	pub fn print(&self) {
-		for ri in 0..DIMENSIONPWR2 {
-			for ci in 0..DIMENSIONPWR2 {
-				print!("{:?}",self.data[ri][ci]+1);
-			}
-			println!("");
-		}
-	}
-
 	pub fn swap_row(&mut self, r_index: usize, shift: usize) {
 		// shift i 0,1 or 2 in case of 3x3 group. Will fail if not unique!
-		for c_index in 0..DIMENSIONPWR2 {
-			let rb_index =  DIMENSION*r_index.div(DIMENSION)+(r_index+shift).rem(DIMENSION);
-			let value_a = self.data[r_index ][c_index];
-			let value_b = self.data[rb_index][c_index];
-			self.data[r_index ][c_index] = value_b;
-			self.data[rb_index][c_index] = value_a;
-		}
+		let rb_index =  DIMENSION*r_index.div(DIMENSION)+(r_index+shift).rem(DIMENSION);
+		self.data.swap(r_index,rb_index);
 	}
 
 	pub fn swap_column(&mut self, c_index: usize, shift: usize) {
 		// shift i 0,1 or 2 in case of 3x3 group. Will fail if not unique!
+		let cb_index =  DIMENSION*c_index.div(DIMENSION)+(c_index+shift).rem(DIMENSION);
 		for r_index in 0..DIMENSIONPWR2 {
-			let cb_index =  DIMENSION*c_index.div(DIMENSION)+(c_index+shift).rem(DIMENSION);
-			let value_a = self.data[r_index][c_index ];
-			let value_b = self.data[r_index][cb_index];
-			self.data[r_index][c_index ]=value_b;
-			self.data[r_index][cb_index]=value_a;
+			self.data[r_index].swap(c_index,cb_index);
 		}
 	}
 
@@ -150,7 +121,7 @@ impl SudokuField {
 				let val: usize = (c_index+DIMENSION*r_index).rem(DIMENSIONPWR2);
 				let shift: usize = r_index.div(DIMENSION);
 				let newval = DIMENSION*val.div(DIMENSION)+(val+shift).rem(DIMENSION);
-				self.data[r_index][c_index] = newval;
+				self.set(r_index,c_index,newval);
 			}
 		}
 		// When enough shaken?? Assume 199 times...
@@ -164,17 +135,20 @@ impl SudokuField {
 		}
 	}
 
-	// Verifies if every number is noly seen once in each row, column and group.
-	pub fn verify(&self) -> bool {
+	// Verifies if every number is only seen at most once in each row, column and group.
+	pub fn has_only_unique_options(&self) -> bool {
 		// Verify uniqueness of in all columns.
 		for ci in 0..DIMENSIONPWR2 {
 			let mut seen = vec![false;DIMENSIONPWR2];
 			for ri in 0..DIMENSIONPWR2 {
-				let v = self.data[ri][ci];
-				if seen[v] {
-					return false;
-				} else {
-					seen[v] = true;
+				for (i,v) in self.data[ri][ci].iter().enumerate() {
+					if *v {
+						if seen[i] {
+							return false;
+						} else {
+							seen[i] = true;
+						}
+					}
 				}
 			}
 		}
@@ -182,15 +156,18 @@ impl SudokuField {
 		for ri in 0..DIMENSIONPWR2 {
 			let mut seen = vec![false;DIMENSIONPWR2];
 			for ci in 0..DIMENSIONPWR2 {
-				let v = self.data[ri][ci];
-				if seen[v] {
-					return false;
-				} else {
-					seen[v] = true;
+				for (i,v) in self.data[ri][ci].iter().enumerate() {
+					if *v {
+						if seen[i] {
+							return false;
+						} else {
+						seen[i] = true;
+						}
+					}
 				}
 			}
 		}
-		// Verify uniquness of all groups;
+		// Verify uniqueness of all groups;
 		for sr_index in 0..DIMENSION {
 			for sc_index in 0..DIMENSION {
 				let mut seen = vec![false;DIMENSIONPWR2];
@@ -198,11 +175,14 @@ impl SudokuField {
 					for c_index in 0..DIMENSION {
 						let tr_index = DIMENSION*sr_index+r_index;
 						let tc_index = DIMENSION*sc_index+c_index;
-						let v = self.data[tr_index][tc_index];
-						if seen[v] {
-							return false;
-						} else {
-							seen[v] = true;
+						for (i,v) in self.data[tr_index][tc_index].iter().enumerate() {
+							if *v {
+								if seen[i] {
+									return false;
+								} else {
+									seen[i] = true;
+								}
+							}
 						}
 					}
 				}
@@ -555,7 +535,7 @@ impl SudokuSolution {
 
 }
 
-pub fn create_puzzle(field: &SudokuField) -> Sudoku {
+pub fn create_puzzle(field: &Sudoku) -> Sudoku {
 	let mut space = SudokuSolution::new();
 	let mut problem = Sudoku::new();
 	// As long as the solution space is not unique, reveal another cell of the problem matrix.
@@ -564,7 +544,10 @@ pub fn create_puzzle(field: &SudokuField) -> Sudoku {
 		// Choose one of the first quarter of sorted cells (the ones with the most options).
 		let i = rand::thread_rng().gen_range(0, 1+undec_cells.len().div(4));
 		let (ri,ci,_) = undec_cells[i];
-		let value = field.data[ri][ci];
+		let mut value = 0;
+		while field.data[ri][ci][value] == false {
+			value = value + 1;
+		}
 		problem.set(ri,ci,value);
 		space.set(ri,ci,value);
 		loop {

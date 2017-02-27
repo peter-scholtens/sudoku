@@ -3,7 +3,7 @@ extern crate sudoku;
 
 #[test]
 fn test_new_with_fault_data_rows() {
-	let faulty = sudoku::SudokuField::new_with_data(vec![
+	let faulty = sudoku::Sudoku::new_with_data(vec![
 	vec![1,1,1,1,1,1,1,1,1],
 	vec![2,2,2,2,2,2,2,2,2],
 	vec![3,3,3,3,3,3,3,3,3],
@@ -14,12 +14,12 @@ fn test_new_with_fault_data_rows() {
 	vec![8,8,8,8,8,8,8,8,8],
 	vec![9,9,9,9,9,9,9,9,9],
 	]);
-	assert_eq!(false, faulty.verify());
+	assert_eq!(false, faulty.has_only_unique_options());
 }
 
 #[test]
 fn test_new_with_fault_data_columns() {
-	let faulty = sudoku::SudokuField::new_with_data(vec![
+	let faulty = sudoku::Sudoku::new_with_data(vec![
 	vec![1,2,3,4,5,6,7,8,9],
 	vec![1,2,3,4,5,6,7,8,9],
 	vec![1,2,3,4,5,6,7,8,9],
@@ -30,12 +30,12 @@ fn test_new_with_fault_data_columns() {
 	vec![1,2,3,4,5,6,7,8,9],
 	vec![1,2,3,4,5,6,7,8,9],
 	]);
-	assert_eq!(false, faulty.verify());
+	assert_eq!(false, faulty.has_only_unique_options());
 }
 
 #[test]
 fn test_new_with_fault_data_groups() {
-	let faulty = sudoku::SudokuField::new_with_data(vec![
+	let faulty = sudoku::Sudoku::new_with_data(vec![
 	vec![1,2,4,3,5,6,7,8,9],
 	vec![4,5,7,6,8,9,1,2,3],
 	vec![7,8,1,9,2,3,4,5,6],
@@ -46,12 +46,12 @@ fn test_new_with_fault_data_groups() {
 	vec![6,4,9,5,7,8,3,1,2],
 	vec![9,7,3,8,1,2,6,4,5],
 	]);
-	assert_eq!(false, faulty.verify());
+	assert_eq!(false, faulty.has_only_unique_options());
 }
 
 #[test]
 fn test_new_with_correct_data() {
-	let correct = sudoku::SudokuField::new_with_data(vec![
+	let correct = sudoku::Sudoku::new_with_data(vec![
 	vec![1,2,3,4,5,6,7,8,9],
 	vec![4,5,6,7,8,9,1,2,3],
 	vec![7,8,9,1,2,3,4,5,6],
@@ -62,5 +62,5 @@ fn test_new_with_correct_data() {
 	vec![6,4,5,9,7,8,3,1,2],
 	vec![9,7,8,3,1,2,6,4,5],
 	]);
-	assert_eq!(true, correct.verify());
+	assert_eq!(true, correct.has_only_unique_options());
 }

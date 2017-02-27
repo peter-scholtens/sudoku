@@ -32,7 +32,7 @@ extern crate sudoku;
 use sudoku::*;
 
 fn main() {
-	let mut field  = SudokuField::new();
+	let mut field  = Sudoku::new();
 	field.fill_randomly();
 	//println!("field:");
 	//field.print();

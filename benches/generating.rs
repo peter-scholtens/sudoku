@@ -13,7 +13,7 @@ mod tests {
 
     #[bench]
 	fn bench_fill_randomly(b: &mut Bencher) {
-		let mut field  = SudokuField::new();
+		let mut field  = Sudoku::new();
 		b.iter(|| field.fill_randomly() );
     }
 }

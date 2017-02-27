@@ -7,7 +7,7 @@ use rand::Rng;
 const  DIMENSION: usize = 3; // For fun we may choose 4 for hexadecimal sudoku's
 const  DIMENSIONPWR2: usize = DIMENSION*DIMENSION;
 
-pub struct SudokuCell {
+struct SudokuCell {
 	options: Vec<bool>,
 }
 
@@ -23,30 +23,35 @@ pub struct SudokuField {
 	data: Vec<Vec<usize>>,
 }
 
-pub struct SudokuProblem {
-	data: Vec<Vec<Option<usize>>>,
+pub struct Sudoku {
+	data: Vec<Vec<Vec<bool>>>,
 }
 
-impl SudokuProblem {
+impl Sudoku {
 
-	pub fn new() -> SudokuProblem {
-		SudokuProblem{ data: vec![vec![None;DIMENSIONPWR2];DIMENSIONPWR2]}
+	pub fn new() -> Sudoku {
+		Sudoku{data: vec![vec![vec![false;DIMENSIONPWR2];DIMENSIONPWR2];DIMENSIONPWR2] }
 	}
 
 	pub fn set(&mut self, r:usize, c:usize, v:usize) {
-		self.data[r][c]=Some(v);
+		self.data[r][c][v]=true;
 	}
 
 	pub fn print(&self) {
 		for ri in 0..DIMENSIONPWR2 {
 			for ci in 0..DIMENSIONPWR2 {
-				match self.data[ri][ci] {
-					Some(value) => {
-						print!("{:?}",value+1);
-					},
-					None => {
-						print!(" ");
+				let mut count_v = 0;
+				let mut value   = 0;
+				for vi in 0..DIMENSIONPWR2 {
+					if self.data[ri][ci][vi] {
+						count_v = count_v+1;
+						value = vi;
 					}
+				}
+				if count_v == 1 {
+					print!("{:?}",value+1);
+				} else {
+					print!(" ");
 				}
 			}
 			println!("");
@@ -57,7 +62,14 @@ impl SudokuProblem {
 		let mut count = 0;
 		for ri in 0..DIMENSIONPWR2 {
 			for ci in 0..DIMENSIONPWR2 {
-				if self.data[ri][ci].is_some() {
+				let mut count_v = 0;
+				for vi in 0..DIMENSIONPWR2 {
+					if self.data[ri][ci][vi] {
+						count_v = count_v+1;
+					}
+				}
+				// if unique then count as revealed.
+				if count_v == 1 {
 					count = count+1;
 				}
 			}
@@ -543,9 +555,9 @@ impl SudokuSolution {
 
 }
 
-pub fn create_puzzle(field: &SudokuField) -> SudokuProblem {
+pub fn create_puzzle(field: &SudokuField) -> Sudoku {
 	let mut space = SudokuSolution::new();
-	let mut problem = SudokuProblem::new();
+	let mut problem = Sudoku::new();
 	// As long as the solution space is not unique, reveal another cell of the problem matrix.
 	while !space.unique_sudoku() {
 		let undec_cells = space.undecided_cells();

@@ -7,26 +7,14 @@ use rand::Rng;
 const  DIMENSION: usize = 3; // For fun we may choose 4 for hexadecimal sudoku's
 const  DIMENSIONPWR2: usize = DIMENSION*DIMENSION;
 
-struct SudokuCell {
-	options: Vec<bool>,
-}
-
-struct SudokuRow {
-	column: Vec<SudokuCell>,
-}
-
-pub struct SudokuSolution {
-	row: Vec<SudokuRow>,
-}
-
 pub struct Sudoku {
 	data: Vec<Vec<Vec<bool>>>,
 }
 
 impl Sudoku {
 
-	pub fn new() -> Sudoku {
-		Sudoku{data: vec![vec![vec![false;DIMENSIONPWR2];DIMENSIONPWR2];DIMENSIONPWR2] }
+	pub fn new(init_b: bool) -> Sudoku {
+		Sudoku{data: vec![vec![vec![init_b;DIMENSIONPWR2];DIMENSIONPWR2];DIMENSIONPWR2] }
 	}
 
 	pub fn set(&mut self, r:usize, c:usize, v:usize) {
@@ -77,7 +65,7 @@ impl Sudoku {
 	}
 
 	pub fn new_with_data(input: Vec<Vec<usize>>) -> Sudoku {
-		let mut retval = Sudoku::new();
+		let mut retval = Sudoku::new(false);
 		// Caution, all data was numbers 1..9 but should be changed to index 0..8
 		for (ri,row) in retval.data.iter_mut().enumerate() {
 			for (ci,column) in row.iter_mut().enumerate() {
@@ -191,27 +179,11 @@ impl Sudoku {
 		// If we arrive here, the sudoku field is correct.
 		return true
 	}
-}
 
-impl SudokuSolution {
-	pub fn new() -> SudokuSolution {
-		let mut s = SudokuSolution{row: Vec::new()};
-		for _ in 0..DIMENSIONPWR2 {
-			let mut r = SudokuRow{column: Vec::new()};
-			for _ in 0..DIMENSIONPWR2 {
-				let e = SudokuCell{options: vec![true;DIMENSIONPWR2]};
-				r.column.push(e);
-			}
-		s.row.push(r);
-		}
-		s
-	}
-
-
-	pub fn print(&self) {
-		for r in self.row.iter() {
-			for c in r.column.iter() {
-				for (index, value) in c.options.iter().enumerate() {
+	pub fn print_options(&self) {
+		for r in self.data.iter() {
+			for c in r.iter() {
+				for (index, value) in c.iter().enumerate() {
 					if *value
 						{
 							print!("{}",index+1);
@@ -227,37 +199,11 @@ impl SudokuSolution {
 		}
 	}
 
-
-	pub fn print_compact(&self) {
-		for (ri,rv) in self.row.iter().enumerate() {
-			for (ci,_) in rv.column.iter().enumerate() {
-				let opt = self.unique_option(ri,ci);
-				match opt {
-					Some(val) => print!("{}",val+1),
-					None      => print!("*"),
-				}
-			}
-			println!("");
-		}
-	}
-
-	pub fn set(&mut self,r_index: usize, c_index: usize, value: usize) -> bool {
-		// first check if is allowed, anyhow do it.
-		let test = self.row[r_index].column[c_index].options[value];
-		for i in self.row[r_index].column[c_index].options.iter_mut()
-		{
-			*i = false;
-		}
-		self.row[r_index].column[c_index].options[value] = true;
-		self.remove_others(r_index,c_index,value);
-		return test;
-	}
-
 	// Verifies if at position (r,c) a unique option is present.
 	// Can be faster with take_while() ??
 	pub fn unique_option(&self,r_index: usize, c_index: usize) -> Option<usize> {
 		let mut uniq = 0;
-		let a = self.row[r_index].column[c_index].options.iter().enumerate().fold(
+		let a = self.data[r_index][c_index].iter().enumerate().fold(
 			0,|mut acc,(index,value)|{
 				if *value {
 					uniq = index;
@@ -275,7 +221,7 @@ impl SudokuSolution {
 	}
 
 	pub fn empty_option(&self,r_index: usize, c_index: usize) -> bool {
-		self.row[r_index].column[c_index].options.iter().fold(
+		self.data[r_index][c_index].iter().fold(
 			true,|empty:bool ,opt|{
 				empty & (*opt == false)
 			}
@@ -285,11 +231,11 @@ impl SudokuSolution {
 
 	pub fn undecided_cells(&self)-> Vec<(usize,usize,usize)> {
 		let mut undec_cells = Vec::new();
-		for (ri,rv) in self.row.iter().enumerate() {
-			for (ci,_) in rv.column.iter().enumerate() {
+		for (ri,rv) in self.data.iter().enumerate() {
+			for (ci,_) in rv.iter().enumerate() {
 				let mut count = 0;
-				for i in 0..DIMENSIONPWR2 {
-					if self.row[ri].column[ci].options[i] == true {
+				for oi in 0..DIMENSIONPWR2 {
+					if self.data[ri][ci][oi] == true {
 						count = count + 1;
 					}
 				}
@@ -306,8 +252,8 @@ impl SudokuSolution {
 
 	pub fn unique_sudoku(&self) -> bool {
 		let mut unique = true;
-		for (ri,rv) in self.row.iter().enumerate() {
-			for (ci,_) in rv.column.iter().enumerate() {
+		for (ri,rv) in self.data.iter().enumerate() {
+			for (ci,_) in rv.iter().enumerate() {
 				let t = self.unique_option(ri,ci).is_some();
 				unique = unique & t;
 				//if t {print!(" ")} else {print!("X")};
@@ -323,7 +269,7 @@ impl SudokuSolution {
 		for r in 0..DIMENSIONPWR2 {
 			if r != r_index {
 				{
-					let d = &mut self.row[r].column[c_index].options[value];
+					let d = &mut self.data[r][c_index][value];
 					if *d {
 						count+=1;
 						*d = false;
@@ -334,7 +280,7 @@ impl SudokuSolution {
 		// Secondly, clear option of others in column
 		for c in 0..DIMENSIONPWR2 {
 			if c != c_index {
-				let d = &mut self.row[r_index].column[c].options[value];
+				let d = &mut self.data[r_index][c][value];
 				if *d {
 					count+=1;
 					*d = false;
@@ -346,7 +292,7 @@ impl SudokuSolution {
 			for sub_c_index in 1..DIMENSION {
 				let r = DIMENSION*r_index.div(DIMENSION)+(r_index+sub_r_index).rem(DIMENSION);
 				let c = DIMENSION*c_index.div(DIMENSION)+(c_index+sub_c_index).rem(DIMENSION);
-				let d = &mut self.row[r].column[c].options[value];
+				let d = &mut self.data[r][c][value];
 				if *d {
 					count+=1;
 					*d = false;
@@ -356,104 +302,33 @@ impl SudokuSolution {
 		count
 	}
 
-	// Verifies if one of the others cells in the same row, column or group has a unique option.
-	pub fn unique_others(&self,r_index: usize, c_index: usize, value: usize) -> bool {
-		let mut unique = false;
-		// First check others in row
-		for r in 0..DIMENSIONPWR2 {
-			if r != r_index {
-				let opt = self.unique_option(r,c_index);
-				match opt {
-					Some(val) => if val == value {unique = true},
-					None      => {},
-				}
-			}
-		}
-		// Secondly, check others in column
-		for c in 0..DIMENSIONPWR2 {
-			if c != c_index {
-				let opt = self.unique_option(r_index,c);
-				match opt {
-					Some(val) => if val == value {unique = true},
-					None      => {},
-				}
-			}
-		}
-		// As third action, check others in group
-		for sub_r_index in 1..DIMENSION {
-			for sub_c_index in 1..DIMENSION {
-				let r = DIMENSION*r_index.div(DIMENSION)+(r_index+sub_r_index).rem(DIMENSION);
-				let c = DIMENSION*c_index.div(DIMENSION)+(c_index+sub_c_index).rem(DIMENSION);
-				let opt = self.unique_option(r,c);
-				match opt {
-					Some(val) => if val == value {unique = true},
-					None      => {},
-				}
-			}
-		}
-	unique
-	}
-
 	// Function which removes all unique options in a row/column/3x3group.
 	// If e.g. a 9 has only one possibly position in a row, set this value
 	// and remove others in column and 3x3 group.
-	// Reports number of set cells. Must be called repetitvely till 0 cells
-	// are touched.
+	// Reports number of set cells. Must be called repetitively till 0 cells
+	// are touched: removal of one option may lead to another cell being unique.
 	pub fn reduce_options(&mut self) -> usize {
-		let mut count_reduc = 0;
-		for symbol in 0..DIMENSIONPWR2 {
-			// first check rows.
-			for r_index in 0..DIMENSIONPWR2 {
-				let mut occ = 0;
-				let mut c_i_last = 0;
-				for c_index in 0..DIMENSIONPWR2 {
-					if self.row[r_index].column[c_index].options[symbol] {
-						c_i_last = c_index;
-						occ = occ+1;
-					}
-				}
-				if occ == 1 {
-					count_reduc = count_reduc + self.remove_others(r_index,c_i_last,symbol);
-				}
-			}
-			// then all columns.
+		let mut candidates_set = Vec::new();
+		let mut count = 0;
+		// First check all unique cells: queue action to remove others in vector.
+		for r_index in 0..DIMENSIONPWR2 {
 			for c_index in 0..DIMENSIONPWR2 {
-				let mut occ = 0;
-				let mut r_i_last = 0;
-				for r_index in 0..DIMENSIONPWR2 {
-					if self.row[r_index].column[c_index].options[symbol] {
-						r_i_last = r_index;
-						occ = occ+1;
-					}
-				}
-				if occ == 1 {
-					count_reduc = count_reduc + self.remove_others(r_i_last,c_index,symbol);
+				match self.unique_option(r_index,c_index) {
+					Some(value) => candidates_set.push( (r_index,c_index,value) ),
+					None        => {},
 				}
 			}
-			// then all 3x3 group.
-			for super_r_index in 0..DIMENSION {
-				for super_c_index in 0..DIMENSION {
-					let mut occ = 0;
-					let mut r_i_last = 0;
-					let mut c_i_last = 0;
-					for r_index in 0..DIMENSION {
-						for c_index in 0..DIMENSION {
-							let tr_index = DIMENSION*super_r_index+r_index;
-							let tc_index = DIMENSION*super_c_index+c_index;
-							if self.row[tr_index].column[tc_index].options[symbol] {
-								r_i_last = tr_index;
-								c_i_last = tc_index;
-								occ = occ+1;
-							}
-						}
-					}
-					if occ == 1 {
-						count_reduc = count_reduc + self.remove_others(r_i_last,c_i_last,symbol);
-					}
-				}
-			}
-			// Symbol is unique in two rows and two columns of the same group?
-			// Then groups has only one option left.
+		}
+		//Next remove others of these candidates.
+		for &(r,c,v) in candidates_set.iter() {
+			count = count + self.remove_others(r,c,v);
+		}
+		let count2 = count;
+		count = 0;
+
+		for symbol in 0..DIMENSIONPWR2 {
+			// Symbol is unique in two rows and two columns, but outside the same group?
+			// Then this group has only one option left.
 			for super_r_index in 0..DIMENSION {
 				for super_c_index in 0..DIMENSION {
 					// Verify cells with shared column, outside group.
@@ -524,22 +399,29 @@ impl SudokuSolution {
 					// Make sure that it not was unique already (to avoid inf. loop)
 					if count_r == 1 && count_c == 1 && self.unique_option(r,c).is_none() {
 						self.set(r,c,symbol);
-						count_reduc = count_reduc + 1;
+						count = count + 1;
 					}
 				}
 			}
 		}
-		//println!("count_reduc = {:?}",count_reduc);
-		count_reduc
+		if count+count2 > 0 {
+			println!("Removed {:?},{:?}",count2,count);
+		}
+		count
 	}
 
 }
 
 pub fn create_puzzle(field: &Sudoku) -> Sudoku {
-	let mut space = SudokuSolution::new();
-	let mut problem = Sudoku::new();
+	let mut space = Sudoku::new(true);
+	let mut problem = Sudoku::new(false);
 	// As long as the solution space is not unique, reveal another cell of the problem matrix.
 	while !space.unique_sudoku() {
+		println!("space:");
+		space.print_options();
+		println!("problem:");
+		problem.print_options();
+		println!("--------");
 		let undec_cells = space.undecided_cells();
 		// Choose one of the first quarter of sorted cells (the ones with the most options).
 		let i = rand::thread_rng().gen_range(0, 1+undec_cells.len().div(4));

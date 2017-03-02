@@ -51,16 +51,6 @@ fn test_new_with_fault_data_groups() {
 
 #[test]
 fn test_new_with_correct_data() {
-	let correct = sudoku::Sudoku::new_with_data(vec![
-	vec![1,2,3,4,5,6,7,8,9],
-	vec![4,5,6,7,8,9,1,2,3],
-	vec![7,8,9,1,2,3,4,5,6],
-	vec![2,3,1,5,6,4,8,9,7],
-	vec![5,6,4,8,9,7,2,3,1],
-	vec![8,9,7,2,3,1,5,6,4],
-	vec![3,1,2,6,4,5,9,7,8],
-	vec![6,4,5,9,7,8,3,1,2],
-	vec![9,7,8,3,1,2,6,4,5],
-	]);
+	let correct = sudoku::Sudoku::identity_sudoku();
 	assert_eq!(true, correct.has_only_unique_options());
 }

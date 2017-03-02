@@ -7,13 +7,13 @@ use sudoku::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use test::Bencher;
+	use super::*;
+	use test::Bencher;
 
 
-    #[bench]
-	fn bench_fill_randomly(b: &mut Bencher) {
+	#[bench]
+	fn bench_shake_randomly(b: &mut Bencher) {
 		let mut field  = Sudoku::new(false);
-		b.iter(|| field.fill_randomly() );
-    }
+		b.iter(|| field.shake_randomly() );
+	}
 }

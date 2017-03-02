@@ -32,8 +32,8 @@ extern crate sudoku;
 use sudoku::*;
 
 fn main() {
-	let mut field  = Sudoku::new(false);
-	field.fill_randomly();
+	let mut field = Sudoku::identity_sudoku();
+	field.shake_randomly();
 	//println!("field:");
 	//field.print();
 	let problem = create_puzzle(&field);

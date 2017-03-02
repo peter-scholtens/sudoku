@@ -89,29 +89,32 @@ impl Sudoku {
 		}
 	}
 
-	pub fn fill_randomly(&mut self) {
-		// Some description:
-		//First generate an identity sudoku:
+	pub fn identity_sudoku() -> Sudoku {
+		// Creates an identity sudoku:
 		//
 		// 123 456 789 
-		// 456 789 123 
-		// 789 123 456
-		// 231
-		//     312
+		// 456 789 123  (shift left in groups of three)
+		// 789 123 456  (idem)
+		// 231          (shift left inside group of three)
+		//     312      (shift left in groupd of three)
 		//         312
 		// 231
 		//     231
 		//         231
-		//
-		// Secondly, swap full rows or columns in within 3-range.
+		let mut s = Sudoku::new(false);
 		for r_index in 0..DIMENSIONPWR2 {
 			for c_index in 0..DIMENSIONPWR2 {
 				let val: usize = (c_index+DIMENSION*r_index).rem(DIMENSIONPWR2);
 				let shift: usize = r_index.div(DIMENSION);
 				let newval = DIMENSION*val.div(DIMENSION)+(val+shift).rem(DIMENSION);
-				self.set(r_index,c_index,newval);
+				s.set(r_index,c_index,newval);
 			}
 		}
+	s
+	}
+
+	pub fn shake_randomly(&mut self) {
+		// Swap full rows or columns in within 3-range.
 		// When enough shaken?? Assume 199 times...
 		for _ in 0..199 {
 			let row_index    = rand::thread_rng().gen_range(0, DIMENSIONPWR2);
@@ -415,12 +418,12 @@ impl Sudoku {
 pub fn create_puzzle(field: &Sudoku) -> Sudoku {
 	let mut space = Sudoku::new(true);
 	let mut problem = Sudoku::new(false);
+	println!("space:");
+	space.print_options();
+	println!("problem:");
+	problem.print_options();
 	// As long as the solution space is not unique, reveal another cell of the problem matrix.
 	while !space.unique_sudoku() {
-		println!("space:");
-		space.print_options();
-		println!("problem:");
-		problem.print_options();
 		println!("--------");
 		let undec_cells = space.undecided_cells();
 		// Choose one of the first quarter of sorted cells (the ones with the most options).
@@ -437,6 +440,26 @@ pub fn create_puzzle(field: &Sudoku) -> Sudoku {
 				break;
 			}
 		}
+		println!("space:");
+		space.print_options();
+		println!("problem:");
+		problem.print_options();
+		println!("equal options: {}",count_equal_options(&space,&problem));
 	}
 	problem
+}
+
+
+pub fn count_equal_options(a: &Sudoku,b: &Sudoku) -> usize {
+	let mut count = 0;
+	for ri in 0..DIMENSIONPWR2 {
+		for ci in 0..DIMENSIONPWR2 {
+			for oi in 0..DIMENSIONPWR2 {
+				if a.data[ri][ci][oi] && b.data[ri][ci][oi] {
+					count = count+1;
+				}
+			}
+		}
+	}
+	count
 }

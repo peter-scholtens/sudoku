@@ -4,8 +4,8 @@ use std::ops::Rem;
 use std::ops::Div;
 use rand::Rng;
 
-const  DIMENSION: usize = 3; // For fun we may choose 4 for hexadecimal sudoku's
-const  DIMENSIONPWR2: usize = DIMENSION*DIMENSION;
+pub const  DIMENSION: usize = 3; // For fun we may choose 4 for hexadecimal sudoku's
+pub const  DIMENSIONPWR2: usize = DIMENSION*DIMENSION;
 
 pub struct Sudoku {
 	data: Vec<Vec<Vec<bool>>>,

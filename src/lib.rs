@@ -26,6 +26,14 @@ impl Sudoku {
 
 	pub fn print(&self) {
 		for ri in 0..DIMENSIONPWR2 {
+			// Print lines between rows, different one for first row.
+			if ri == 0 {
+				println!("┌─┬─┬─┬─┬─┬─┬─┬─┬─┐");
+			} else
+			{
+				println!("├─┼─┼─┼─┼─┼─┼─┼─┼─┤");
+			}
+			print!("│");
 			for ci in 0..DIMENSIONPWR2 {
 				let mut count_v = 0;
 				let mut value   = 0;
@@ -36,13 +44,14 @@ impl Sudoku {
 					}
 				}
 				if count_v == 1 {
-					print!("{:?}",value+1);
+					print!("{:?}│",value+1);
 				} else {
-					print!(" ");
+					print!("·│");
 				}
 			}
 			println!("");
 		}
+		println!("└─┴─┴─┴─┴─┴─┴─┴─┴─┘");
 	}
 
 	pub fn stats(&self) {

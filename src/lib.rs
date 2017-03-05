@@ -314,30 +314,102 @@ impl Sudoku {
 		count
 	}
 
-	// Function which removes all unique options in a row/column/3x3group.
-	// If e.g. a 9 has only one possibly position in a row, set this value
-	// and remove others in column and 3x3 group.
+	// Function which removes all options of others if a unique options in a
+	// row/column/3x3group is detected.
+	// If e.g. a 9 has only one possibly position in a cell, set this value
+	// and remove others in row, column and 3x3 group.
 	// Reports number of set cells. Must be called repetitively till 0 cells
 	// are touched: removal of one option may lead to another cell being unique.
 	pub fn reduce_options(&mut self) -> usize {
 		let mut candidates_set = Vec::new();
-		let mut count = 0;
+		let mut count_u = 0;
 		// First check all unique cells: queue action to remove others in vector.
 		for r_index in 0..DIMENSIONPWR2 {
 			for c_index in 0..DIMENSIONPWR2 {
 				match self.unique_option(r_index,c_index) {
-					Some(value) => candidates_set.push( (r_index,c_index,value) ),
+					Some(value) => {
+						candidates_set.push( (r_index,c_index,value) );
+						count_u = count_u + 1;
+						},
 					None        => {},
 				}
 			}
 		}
-		//Next remove others of these candidates.
-		for &(r,c,v) in candidates_set.iter() {
-			count = count + self.remove_others(r,c,v);
-		}
-		let count2 = count;
-		count = 0;
 
+		// Verify if a symbol/value has only one option in row.
+		let mut count_r = 0;
+		for value in 0..DIMENSIONPWR2 {
+			for r_index in 0..DIMENSIONPWR2 {
+				let mut num_options = 0;
+				let mut c_last = 0;
+				for c_index in 0..DIMENSIONPWR2 {
+					if self.data[r_index][c_index][value] == true {
+						num_options = num_options + 1;
+						c_last = c_index;
+					}
+				}
+				if num_options == 1 {
+					candidates_set.push( (r_index,c_last,value) );
+					count_r = count_r + 1;
+				}
+			}
+		}
+
+		// Verify if a symbol/value has only one option in column.
+		let mut count_c = 0;
+		for value in 0..DIMENSIONPWR2 {
+			for c_index in 0..DIMENSIONPWR2 {
+				let mut num_options = 0;
+				let mut r_last = 0;
+				for r_index in 0..DIMENSIONPWR2 {
+					if self.data[r_index][c_index][value] == true {
+						num_options = num_options + 1;
+						r_last = r_index;
+					}
+				}
+				if num_options == 1 {
+					candidates_set.push( (r_last,c_index,value) );
+					count_c = count_c + 1;
+				}
+			}
+		}
+
+		// Verify if a symbol/value has only one option in group.
+		let mut count_g = 0;
+		for value in 0..DIMENSION {
+			for super_r_index in 0..DIMENSION {
+				for super_c_index in 0..DIMENSION {
+					let mut num_options = 0;
+					let mut r_last = 0;
+					let mut c_last = 0;
+					for sub_r_index in 0..DIMENSION {
+						for sub_c_index in 0..DIMENSION {
+							let r_index = super_r_index*DIMENSION+sub_r_index;
+							let c_index = super_c_index*DIMENSION+sub_c_index;
+							if self.data[r_index][c_index][value] == true {
+								num_options = num_options + 1;
+								r_last = r_index;
+								c_last = c_index;
+							}
+						}
+					}
+					if num_options == 1 {
+						candidates_set.push( (r_last,c_last,value) );
+					count_g = count_g + 1;
+					}
+				}
+			}
+		}
+
+		//Next remove others of these candidates.
+		let mut count_o = 0;
+		for &(r,c,v) in candidates_set.iter() {
+			//println!("{:?}-{:?}-{:?}",r,c,v);
+			self.set(r,c,v);
+			count_o = count_o + self.remove_others(r,c,v);
+		}
+
+		let mut count_e = 0;
 		for symbol in 0..DIMENSIONPWR2 {
 			// Symbol is unique in two rows and two columns, but outside the same group?
 			// Then this group has only one option left.
@@ -386,20 +458,20 @@ impl Sudoku {
 						}
 					}
 					// If both unique vectors have DIM-1 uniques, than we can set the remaining one.
-					let mut count_r = DIMENSION;
+					let mut count_row = DIMENSION;
 					let mut last_r  = 0;
 					for r in 0..DIMENSION {
 						if unique_row[r] {
-							count_r = count_r - 1;
+							count_row = count_row - 1;
 						} else {
 							last_r = r; // get remaining non-unique row.
 						}
 					}
-					let mut count_c = DIMENSION;
+					let mut count_column = DIMENSION;
 					let mut last_c  = 0;
 					for c in 0..DIMENSION {
 						if unique_column[c] {
-							count_c = count_c - 1;
+							count_column = count_column - 1;
 						} else {
 							last_c = c; // get remaining non-unique column.
 						}
@@ -409,17 +481,18 @@ impl Sudoku {
 					let r = super_r_index*DIMENSION+last_r;
 					let c = super_c_index*DIMENSION+last_c;
 					// Make sure that it not was unique already (to avoid inf. loop)
-					if count_r == 1 && count_c == 1 && self.unique_option(r,c).is_none() {
+					if count_row == 1 && count_column == 1 && self.unique_option(r,c).is_none() {
 						self.set(r,c,symbol);
-						count = count + 1;
+						count_e = count_e + self.remove_others(r,c,symbol);
 					}
 				}
 			}
 		}
-		if count+count2 > 0 {
-			println!("Removed {:?},{:?}",count2,count);
+		let sum = count_e+count_o;// to avoid loop
+		if sum > 0 {
+			//println!("Removed (r={:?}, c={:?}, g={:?}), e={:?}, o={:?}",count_r,count_c,count_g,count_e,count_o);
 		}
-		count
+		sum
 	}
 
 }
@@ -427,13 +500,13 @@ impl Sudoku {
 pub fn create_puzzle(field: &Sudoku) -> Sudoku {
 	let mut space = Sudoku::new(true);
 	let mut problem = Sudoku::new(false);
-	println!("space:");
-	space.print_options();
-	println!("problem:");
-	problem.print_options();
+	//println!("space:");
+	//space.print_options();
+	//println!("problem:");
+	//problem.print_options();
 	// As long as the solution space is not unique, reveal another cell of the problem matrix.
 	while !space.unique_sudoku() {
-		println!("--------");
+		//println!("--------");
 		let undec_cells = space.undecided_cells();
 		// Choose one of the first quarter of sorted cells (the ones with the most options).
 		let i = rand::thread_rng().gen_range(0, 1+undec_cells.len().div(4));
@@ -449,11 +522,11 @@ pub fn create_puzzle(field: &Sudoku) -> Sudoku {
 				break;
 			}
 		}
-		println!("space:");
-		space.print_options();
-		println!("problem:");
-		problem.print_options();
-		println!("equal options: {}",count_equal_options(&space,&problem));
+		//println!("space:");
+		//space.print_options();
+		//println!("problem:");
+		//problem.print_options();
+		//println!("equal options: {}",count_equal_options(&space,&problem));
 	}
 	problem
 }
